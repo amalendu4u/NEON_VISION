@@ -14,6 +14,8 @@ coverage/
 # Local environment and package-manager credentials
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
 !.env.*.example
 .npmrc

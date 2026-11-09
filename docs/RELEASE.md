@@ -4,7 +4,7 @@
 
 - `npm run build` runs the configured Vite build.
 - Build output: `dist/`; both the options shell (`index.html`) and player frame (`preview.html`) are emitted.
-- `vite.config.ts` uses `base: './'`, so assets are relative for a domain root or subpath.
+- `vite.config.ts` uses `base: '/'`; the current hosting configuration targets the domain root.
 - `vercel.json` and `netlify.toml` point to the Vite build and `dist/` output. A Cloudflare Pages script is also present.
 - Public subtitle/chapter VTT files are under `apps/preview/public/` and should be copied by Vite into the preview build.
 - No deploy command has been run. Host authentication, project creation, and publishing remain future explicit steps.
@@ -13,7 +13,7 @@
 
 The root package is private and has no package `exports`, library build, published artifact, or standalone player bundle. `npm ci` is the clean dependency installation command. It was not run as part of the implementation pass because it would replace the existing installed dependency tree; validate it in a clean checkout/CI before handoff. The lockfile is checked in.
 
-The project directory currently has no `.git` folder, so tracked-file secret scanning and GitHub readiness cannot be confirmed from this workspace. `.gitignore` excludes `node_modules`, `dist`, local environment files, and hosting CLI state. No credentials are needed for local preview or build. Review and scan all files after creating/connecting a Git repository.
+The local Git repository is on `main` with initial commit `40f6961e63d192ca5d5560e80c284365c5f3a5f9`; no remote is configured. A staged-content scan found no private Mux credential patterns or other matching secret patterns. `.gitignore` excludes dependencies, build output, local environment files, credential/key files, caches, logs, and hosting CLI state. No credentials are needed for local preview or build. Remote GitHub publication and deployment remain deferred.
 
 ## Clip-export feasibility
 

@@ -1,7 +1,7 @@
 import { MuxVideo } from '@videojs/react/media/mux-video';
 import { isMediaSeekCapable, isMediaSourceCapable, useHotkey, useMedia } from '@videojs/react';
 import { Video, VideoPlayer } from '@videojs/react/video';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { VideoSkin } from '@/video/skin';
 import { DEFAULT_PLAYLIST, type PlaylistItem } from '@/video/playlist';
@@ -134,6 +134,13 @@ function TheaterModeHotkey({ onToggle }: { onToggle: () => void }) {
   return null;
 }
 
+function readViewportSize() {
+  return {
+    width: Math.round(window.visualViewport?.width ?? window.innerWidth),
+    height: Math.round(window.visualViewport?.height ?? window.innerHeight),
+  };
+}
+
 /** `media` carries the workbench's playback options: autoplay, muted, loop, and preload. */
 export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailable = false, config: configInput }: PlayerProps) {
   const config = resolveNeonVisionConfig(configInput);
@@ -144,6 +151,7 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
   const [selectedId, setSelectedId] = useState(firstId);
   const [pendingPlayId, setPendingPlayId] = useState<string | null>(null);
   const [theater, setTheater] = useState(false);
+  const [viewportSize, setViewportSize] = useState(readViewportSize);
   const [autoplayNext, setAutoplayNext] = useState(() => {
     if (!features.autoplayNext || !features.playlist || items.length < 2) return false;
     try { return localStorage.getItem('neon-vision-autoplay-next') === 'true'; } catch { return false; }
@@ -151,7 +159,16 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
   const [playbackMessage, setPlaybackMessage] = useState('');
   const playlistToggleRef = useRef<HTMLButtonElement>(null);
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0]!;
-  const canAutoplayNext = features.autoplayNext && features.playlist && items.length > 1;
+  const selectedIndex = items.findIndex((item) => item.id === selectedItem.id);
+  const canAutoplayNext = features.autoplayNext && features.playlist && selectedIndex >= 0 && selectedIndex < items.length - 1;
+  const aspectParts = (selectedItem.aspectRatio ?? '16:9').split(':').map(Number);
+  const aspectWidth = Number.isFinite(aspectParts[0]) && aspectParts[0]! > 0 ? aspectParts[0]! : 16;
+  const aspectHeight = Number.isFinite(aspectParts[1]) && aspectParts[1]! > 0 ? aspectParts[1]! : 9;
+  const playerAspectRatio = aspectWidth / aspectHeight;
+  const theaterWidth = Math.max(0, Math.min(viewportSize.width - 24, (viewportSize.height - 168) * playerAspectRatio));
+  const streamLayoutStyle = {
+    '--neon-theater-width': `${theaterWidth}px`,
+  } as CSSProperties;
   const handlePlayHandled = useCallback(() => setPendingPlayId(null), []);
   const handlePlayBlocked = useCallback(() => setPlaybackMessage('Playback was blocked. Press Play to continue.'), []);
 
@@ -160,6 +177,18 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
       setSelectedId(items[0]!.id);
     }
   }, [items, selectedId]);
+
+  useLayoutEffect(() => {
+    if (!theater) return;
+    const updateViewport = () => setViewportSize(readViewportSize());
+    window.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    updateViewport();
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+    };
+  }, [theater]);
 
   useEffect(() => {
     if (!canAutoplayNext) {
@@ -200,7 +229,9 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
   }, [autoplayNext, canAutoplayNext, items, selectedId]);
 
   return (
-    <div className="neon-stream-layout" data-playlist-open={features.playlist && playlistOpen} data-theater={features.theaterMode && theater} data-autoplay-next={canAutoplayNext && autoplayNext} data-sidebar-layout={sidePlaylistAvailable ? 'side' : 'stack'}>
+    <>
+      {theater && <div className="neon-theater-placeholder" style={{ aspectRatio: `${aspectWidth} / ${aspectHeight}` }} aria-hidden="true" />}
+      <div className="neon-stream-layout" style={streamLayoutStyle} data-playlist-open={features.playlist && playlistOpen} data-theater={features.theaterMode && theater} data-autoplay-next={canAutoplayNext && autoplayNext} data-sidebar-layout={sidePlaylistAvailable ? 'side' : 'stack'}>
       <VideoPlayer poster={selectedItem.poster} title={selectedItem.title}>
         <div className="neon-player-main" style={{ aspectRatio: selectedItem.aspectRatio?.replace(':', ' / ') }}>
           <VideoSkin
@@ -299,6 +330,7 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
         onSelect={selectItem}
       />}
       <span className="neon-playback-message" role="status" aria-live="polite">{playbackMessage}</span>
-    </div>
+      </div>
+    </>
   );
 }

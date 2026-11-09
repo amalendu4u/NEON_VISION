@@ -12,3 +12,5 @@ h1,h2,h3,.nv-brand{font-family:"Space Grotesk",Inter,ui-sans-serif,system-ui,san
 .nv-hero-player{padding:10px;display:flex;align-items:center;transform:none}
 .nv-hero-player .preview-player{width:100%;max-width:none;container:preview-frame / inline-size}
 .nv-hero-player .neon-player-main{border-radius:12px}
+.nv-home:has(.neon-stream-layout[data-theater="true"]){overflow:visible}
+.nv-hero-art:has(.neon-stream-layout[data-theater="true"]){overflow:visible;z-index:30}

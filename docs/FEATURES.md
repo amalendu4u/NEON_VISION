@@ -5,13 +5,13 @@ Implementation and verification status for the existing preview and skin. Browse
 ## Current implementation status
 
 - `npm run typecheck` and `npm run build` pass after the latest changes.
-- Browser verification covered the default two-item playlist, 16:9 theater layout, mobile toolbar, theme switching/persistence, current-frame PNG capture, chapters, captions, seeking, playback, and volume. Limits are listed below.
+- Earlier browser verification covered the default two-item playlist, 16:9 theater layout, mobile toolbar, theme switching/persistence, current-frame PNG capture, chapters, captions, seeking, playback, and volume. This pass changed theater positioning; the revised product-route layout could not be browser-verified in the current execution environment.
 - The project preserves the official Video.js v10 React architecture, Mux adapter, Mux-first configured source, Sintel secondary source, Sintel English subtitles, chapter/thumbnail timeline components, error handling, hotkeys, gestures, and status announcer.
 - Theme variables now style caption cues, glass menus/popovers, sliders, buttons and the UP NEXT sibling panel. The theme preference remains stored in local storage. Verify cue rendering and immediate theme changes in target browsers.
 - Settings and submenu transitions use CSS state and reduced-motion fallbacks; control bar and title use the existing visibility state for vertical entry/exit motion.
 - UP NEXT is a fixed-height desktop overlay with a fixed header and independently scrolling item region. It moves below the player on narrow screens. Theater mode hides it without clearing its open state; exiting theater restores it.
-- Theater Mode keeps the 16:9 player inside the viewport without requesting browser fullscreen. Eight viewport sizes from 320×568 through 1920×1080 were checked with no theater-induced page scroll.
-- Autoplay Next advances to the next configured playlist item only after the current source ends. It does not enable initial autoplay; the preference persists. Rejected play requests are reported in the preview status region.
+- Theater Mode now positions the player against the viewport instead of relying on route wrapper sizing. The player remains mounted during activation and a hidden placeholder preserves the original layout slot. The latest adjustment still needs real-browser checks on `/`, `/player`, `/workbench`, desktop, and mobile.
+- Autoplay Next advances to the following configured item only after the current source ends. The toggle is hidden on the final item and when no valid next item exists. It does not enable initial autoplay; the preference persists. Rejected play requests are reported in the preview status region.
 - Settings includes a nested real countdown Sleep Timer that pauses the current media through the Video.js media context and clears its interval when inactive or unmounted.
 - Autoplay, Theater Mode, UP NEXT, and Chapters use compact toolbar buttons with labels, state, and tooltips. The chapter menu is populated only from real chapter cues exposed by the active source; the current Mux stream has chapter metadata, while Sintel does not.
 - Audio Track selection uses Video.js v10's real `AudioTrackRadioGroup`; it depends on actual tracks exposed by the source/adapter and is not guaranteed for the two current sources.

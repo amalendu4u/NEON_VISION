@@ -46,6 +46,7 @@ This example documents the preview component’s current source path; the reposi
 - `description` is optional playlist metadata.
 - `tracks` supports `subtitles`, `captions`, `chapters`, and `metadata` WebVTT tracks.
 - Set `hasChapters: true` when the media source exposes genuine in-band chapters (as the default Mux stream does); use a `kind: 'chapters'` entry in `tracks` for a separate WebVTT chapter file.
+- A chapter track is associated with only the playlist item that declares it. Chapter cues name sections and seek to their start; subtitle/caption cues display spoken or descriptive text over time. Keep chapter cues chronological, non-overlapping, and within the exact media version’s duration.
 - `thumbnail` is optional playlist artwork metadata; `thumbnailTrack` can supply a storyboard track understood by the Video.js timeline. The preview only displays posters today.
 - `duration` is optional display text. If omitted, no duration badge is shown; don’t invent a duration.
 
