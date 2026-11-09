@@ -1,7 +1,7 @@
 import { MuxVideo } from '@videojs/react/media/mux-video';
-import { isMediaSeekCapable, isMediaSourceCapable, useHotkey, useMedia } from '@videojs/react';
+import { isMediaSeekCapable, isMediaSourceCapable, useContainer, useHotkey, useMedia } from '@videojs/react';
 import { Video, VideoPlayer } from '@videojs/react/video';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { VideoSkin } from '@/video/skin';
 import { DEFAULT_PLAYLIST, type PlaylistItem } from '@/video/playlist';
@@ -32,6 +32,10 @@ function PlaylistTrackElements({ item }: { item: PlaylistItem }) {
     {item.tracks?.map((track) => <track key={`${track.kind}:${track.src}`} {...track} />)}
     {item.thumbnailTrack && <track key={`thumbnail:${item.thumbnailTrack.src}`} {...item.thumbnailTrack} />}
   </>;
+}
+
+function isPlaybackBlockedError(error: unknown) {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'NotAllowedError';
 }
 
 function PlaylistPanel({ items, open, selectedId, theater, onClose, onSelect }: {
@@ -102,31 +106,76 @@ function PlaylistPanel({ items, open, selectedId, theater, onClose, onSelect }: 
   );
 }
 
-function SourcePlayback({ selectedId, selectedSrc, selectedAdapter, pendingPlayId, onPlayHandled, onPlayBlocked }: {
+function SourcePlayback({ selectedId, selectedSrc, selectedAdapter, pendingPlayId, onPlayHandled, onPlayBlocked, onPlaybackStarted }: {
   selectedId: string;
   selectedSrc: string;
   selectedAdapter: PlaylistItem['adapter'];
   pendingPlayId: string | null;
   onPlayHandled: () => void;
   onPlayBlocked: () => void;
+  onPlaybackStarted: () => void;
 }) {
   const media = useMedia();
+  const container = useContainer();
 
   useEffect(() => {
     if (!media || pendingPlayId !== selectedId || !isMediaSourceCapable(media)) return;
 
-    // The old adapter can still be attached for a commit after selection changes. Wait for the new source
-    // to register before resetting time or requesting playback.
-    const expectedSource = new URL(selectedSrc, window.location.href);
-    const attachedSource = new URL(media.currentSrc || media.src, window.location.href);
-    const isMuxAdapterSource = selectedAdapter === 'mux' && attachedSource.protocol === 'blob:';
-    const isExpectedSource =
-      attachedSource.origin === expectedSource.origin && attachedSource.pathname === expectedSource.pathname;
-    if (!isMuxAdapterSource && !isExpectedSource) return;
+    let cancelled = false;
+    let requested = false;
+    const video = media instanceof HTMLMediaElement ? media : container?.querySelector('video') ?? null;
 
-    if (isMediaSeekCapable(media)) media.currentTime = 0;
-    void media.play().catch(onPlayBlocked).finally(onPlayHandled);
-  }, [media, onPlayBlocked, onPlayHandled, pendingPlayId, selectedId, selectedAdapter, selectedSrc]);
+    const expectedSource = new URL(selectedSrc, window.location.href);
+    const tryPlayback = () => {
+      if (cancelled || requested || !video) return;
+
+      // Mux uses Media Source Extensions, so currentSrc is a blob URL and
+      // cannot identify which playback ID the adapter has registered. Its
+      // `src` remains the requested Mux URL. For native media, currentSrc is
+      // the strongest indication that the selected source has attached.
+      const sourceUrl = selectedAdapter === 'mux' ? media.src : media.currentSrc || media.src;
+      if (!sourceUrl) return;
+      const attachedSource = new URL(sourceUrl, window.location.href);
+      if (attachedSource.origin !== expectedSource.origin || attachedSource.pathname !== expectedSource.pathname) return;
+
+      // `media.src` is updated before the Mux engine finishes attaching and
+      // buffering. Only request play once this adapter is tied to the current
+      // video element and that element can begin playback.
+      if (!video.currentSrc || media.currentSrc !== video.currentSrc) return;
+      if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA || media.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return;
+
+      requested = true;
+      if (isMediaSeekCapable(media)) media.currentTime = 0;
+      void media.play().catch((error: unknown) => {
+        // Only report a current browser-policy rejection; stale requests and
+        // media/network failures have their own lifecycle and UI.
+        if (!cancelled && video?.paused !== false && isPlaybackBlockedError(error)) onPlayBlocked();
+      }).finally(() => {
+        if (!cancelled) onPlayHandled();
+      });
+    };
+
+    video?.addEventListener('loadstart', tryPlayback);
+    video?.addEventListener('loadedmetadata', tryPlayback);
+    video?.addEventListener('canplay', tryPlayback);
+    tryPlayback();
+
+    return () => {
+      cancelled = true;
+      video?.removeEventListener('loadstart', tryPlayback);
+      video?.removeEventListener('loadedmetadata', tryPlayback);
+      video?.removeEventListener('canplay', tryPlayback);
+    };
+  }, [container, media, onPlayBlocked, onPlayHandled, pendingPlayId, selectedId, selectedAdapter, selectedSrc]);
+
+  useEffect(() => {
+    const video = media instanceof HTMLMediaElement ? media : container?.querySelector('video') ?? null;
+    if (!video) return;
+    const handlePlaying = () => onPlaybackStarted();
+    video.addEventListener('playing', handlePlaying);
+    if (!video.paused) handlePlaying();
+    return () => video.removeEventListener('playing', handlePlaying);
+  }, [container, media, onPlaybackStarted]);
 
   return null;
 }
@@ -134,6 +183,40 @@ function SourcePlayback({ selectedId, selectedSrc, selectedAdapter, pendingPlayI
 function TheaterModeHotkey({ onToggle }: { onToggle: () => void }) {
   useHotkey({ keys: 't', action: 'toggleTheaterMode', onActivate: onToggle });
   return null;
+}
+
+function PlaylistCompleteOverlay({ visible, onDismiss, onChooseAnother, onPlayBlocked }: {
+  visible: boolean;
+  onDismiss: () => void;
+  onChooseAnother: () => void;
+  onPlayBlocked: () => void;
+}) {
+  const media = useMedia();
+  const headingId = useId();
+  if (!visible) return null;
+
+  const replay = () => {
+    onDismiss();
+    if (!media || !isMediaSeekCapable(media)) return;
+    media.currentTime = 0;
+    void media.play().catch((error: unknown) => {
+      if (isPlaybackBlockedError(error)) onPlayBlocked();
+    });
+  };
+
+  return (
+    <section className="neon-playlist-complete" role="group" aria-labelledby={headingId}>
+      <div className="neon-playlist-complete-card">
+        <span className="neon-playlist-complete-kicker">NEON VISION · PLAYLIST</span>
+        <h2 id={headingId}>Playlist Complete</h2>
+        <p>You've reached the end of the playlist.</p>
+        <div className="neon-playlist-complete-actions">
+          <button className="neon-playlist-complete-replay" type="button" onClick={replay}>Replay</button>
+          <button className="neon-playlist-complete-choose" type="button" onClick={onChooseAnother}>Choose Another Video</button>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function readViewportSize() {
@@ -158,6 +241,7 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
     if (!features.autoplayNext || !features.playlist || items.length < 2) return false;
     try { return localStorage.getItem('neon-vision-autoplay-next') === 'true'; } catch { return false; }
   });
+  const [playlistCompleteForId, setPlaylistCompleteForId] = useState<string | null>(null);
   const [playbackMessage, setPlaybackMessage] = useState('');
   const playlistToggleRef = useRef<HTMLButtonElement>(null);
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0]!;
@@ -172,7 +256,11 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
     '--neon-theater-width': `${theaterWidth}px`,
   } as CSSProperties;
   const handlePlayHandled = useCallback(() => setPendingPlayId(null), []);
-  const handlePlayBlocked = useCallback(() => setPlaybackMessage('Playback was blocked. Press Play to continue.'), []);
+  const handlePlayBlocked = useCallback(() => setPlaybackMessage('Playback was blocked. Press Play or Space/K to continue.'), []);
+  const handlePlaybackStarted = useCallback(() => {
+    setPlaybackMessage('');
+    setPendingPlayId(null);
+  }, []);
 
   useEffect(() => {
     if (!items.some((item) => item.id === selectedId)) {
@@ -193,13 +281,13 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
   }, [theater]);
 
   useEffect(() => {
-    if (!canAutoplayNext) {
+    if (!features.autoplayNext || !features.playlist || items.length < 2) {
       setAutoplayNext(false);
       try { localStorage.removeItem('neon-vision-autoplay-next'); } catch { /* Storage may be disabled. */ }
       return;
     }
     try { localStorage.setItem('neon-vision-autoplay-next', String(autoplayNext)); } catch { /* Storage may be disabled. */ }
-  }, [autoplayNext, canAutoplayNext]);
+  }, [autoplayNext, features.autoplayNext, features.playlist, items.length]);
 
   const closePlaylist = useCallback(() => {
     setPlaylistOpen(false);
@@ -211,6 +299,7 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
       closePlaylist();
       return;
     }
+    setPlaylistCompleteForId(null);
     setPlaybackMessage('');
     setSelectedId(id);
     setPendingPlayId(id);
@@ -218,17 +307,19 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
   }, [closePlaylist, selectedId]);
 
   const onMediaEnded = useCallback(() => {
-    if (!canAutoplayNext || !autoplayNext) return;
+    if (!autoplayNext || !features.autoplayNext || !features.playlist) return;
     const currentIndex = items.findIndex((item) => item.id === selectedId);
     const nextItem = items[currentIndex + 1];
     if (!nextItem) {
-      setPlaybackMessage('Autoplay is on. The playlist has ended.');
+      setPlaybackMessage('');
+      setPlaylistCompleteForId(selectedId);
       return;
     }
+    setPlaylistCompleteForId(null);
     setPlaybackMessage('');
     setSelectedId(nextItem.id);
     setPendingPlayId(nextItem.id);
-  }, [autoplayNext, canAutoplayNext, items, selectedId]);
+  }, [autoplayNext, features.autoplayNext, features.playlist, items, selectedId]);
 
   return (
     <>
@@ -302,16 +393,25 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
             }
           >
             {selectedItem.adapter === 'mux' ? (
-              <MuxVideo key={selectedItem.id} {...media} src={selectedItem.src} playsInline crossOrigin="" onEnded={canAutoplayNext ? onMediaEnded : undefined}>
+              <MuxVideo key={selectedItem.id} {...media} src={selectedItem.src} playsInline crossOrigin="" onEnded={autoplayNext && features.autoplayNext && features.playlist && items.length > 1 ? onMediaEnded : undefined}>
                 <PlaylistTrackElements item={selectedItem} />
               </MuxVideo>
             ) : (
-              <Video key={selectedItem.id} {...media} poster={selectedItem.poster} playsInline crossOrigin="anonymous" onEnded={canAutoplayNext ? onMediaEnded : undefined}>
+              <Video key={selectedItem.id} {...media} poster={selectedItem.poster} playsInline crossOrigin="anonymous" onEnded={autoplayNext && features.autoplayNext && features.playlist && items.length > 1 ? onMediaEnded : undefined}>
                 <source src={selectedItem.src} type={selectedItem.type} />
                 <PlaylistTrackElements item={selectedItem} />
               </Video>
             )}
           </VideoSkin>
+          <PlaylistCompleteOverlay
+            visible={playlistCompleteForId === selectedItem.id && autoplayNext}
+            onDismiss={() => setPlaylistCompleteForId(null)}
+            onChooseAnother={() => {
+              setPlaylistCompleteForId(null);
+              setPlaylistOpen(true);
+            }}
+            onPlayBlocked={handlePlayBlocked}
+          />
         </div>
         {features.theaterMode && <TheaterModeHotkey onToggle={() => setTheater((enabled) => !enabled)} />}
         <SourcePlayback
@@ -321,8 +421,8 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
           pendingPlayId={pendingPlayId}
           onPlayHandled={handlePlayHandled}
           onPlayBlocked={handlePlayBlocked}
+          onPlaybackStarted={handlePlaybackStarted}
         />
-        <span className="neon-playback-message" role="status" aria-live="polite">{playbackMessage}</span>
       </VideoPlayer>
       {features.playlist && <PlaylistPanel
         items={items}
