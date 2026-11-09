@@ -9,8 +9,39 @@
 @media(forced-colors:active){.nv-button,.nv-nav-cta,.nv-feature-grid article,.nv-player-card{border:1px solid CanvasText}.nv-art-grid,.nv-art-orb,.nv-art-line,.nv-cta-glow{display:none}.nv-eyebrow,.nv-brand,.nv-nav nav,.nv-feature-grid p{color:CanvasText}}
 
 h1,h2,h3,.nv-brand{font-family:"Space Grotesk",Inter,ui-sans-serif,system-ui,sans-serif}
-.nv-hero-player{padding:10px;display:flex;align-items:center;transform:none}
-.nv-hero-player .preview-player{width:100%;max-width:none;container:preview-frame / inline-size}
-.nv-hero-player .neon-player-main{border-radius:12px}
 .nv-home:has(.neon-stream-layout[data-theater="true"]){overflow:visible}
-.nv-hero-art:has(.neon-stream-layout[data-theater="true"]){overflow:visible;z-index:30}
+
+/* Homepage showcase: the headline leads into a wide, unclipped player. */
+.nv-home .nv-hero{display:block;min-height:0;padding-block:42px 54px}
+.nv-home .nv-hero-copy{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);grid-template-areas:"eyebrow eyebrow" "title summary" "stack actions";align-items:end;column-gap:48px;row-gap:0;max-width:1000px}
+.nv-home .nv-hero-copy>.nv-eyebrow{grid-area:eyebrow;margin:0}
+.nv-home .nv-hero-copy>h1{grid-area:title;font-size:clamp(50px,5vw,68px);margin:14px 0 0}
+.nv-home .nv-hero-copy>p{grid-area:summary;align-self:end;margin:0 0 2px;font-size:14px}
+.nv-home .nv-hero-copy>.nv-actions{grid-area:actions;margin:18px 0 0}
+.nv-home .nv-hero-copy>.nv-stack{grid-area:stack;margin:20px 0 0}
+.nv-home-player{position:relative;width:100%;height:auto;min-height:0;margin-block-start:34px;padding:0;display:block;overflow:visible;border:0;border-radius:0;background:none;box-shadow:none;isolation:auto}
+.nv-home-player .preview-player{position:relative;z-index:auto;width:100%;max-width:none;container:preview-frame / inline-size}
+.nv-home-player:has(.neon-stream-layout[data-theater="true"]){z-index:30;overflow:visible}
+.nv-home-player .neon-stream-layout[data-theater="true"]{display:block}
+
+@media(min-width:851px){
+  .nv-home-player .neon-stream-layout[data-playlist-open="true"]{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,32%);align-items:stretch;gap:16px}
+  .nv-home-player .neon-stream-layout[data-playlist-open="true"]>.neon-playlist{position:relative;inset:auto;z-index:auto;grid-column:2;grid-row:1;width:100%;height:auto;min-height:0;max-height:none;margin:0;padding:14px;display:flex;flex-direction:column;overflow:hidden;opacity:1;visibility:visible;pointer-events:auto;translate:0;border-color:color-mix(in srgb,var(--neon-cyan,#00f5d4) 34%,rgb(244 247 251 / 13%));transition:opacity 180ms ease}
+  .nv-home-player .neon-stream-layout[data-playlist-open="true"]>.neon-playlist .neon-playlist-items{flex:1 1 0;min-height:0;overflow-y:auto}
+}
+
+@media(max-width:850px){
+  .nv-home .nv-hero{padding-block:40px 48px}
+  .nv-home .nv-hero-copy{grid-template-columns:minmax(0,1fr);grid-template-areas:"eyebrow" "title" "summary" "actions" "stack";column-gap:0}
+  .nv-home .nv-hero-copy>h1{font-size:clamp(50px,8vw,66px)}
+  .nv-home .nv-hero-copy>p{max-width:600px;margin:12px 0 0}
+  .nv-home .nv-hero-copy>.nv-actions{margin-block-start:18px}
+  .nv-home .nv-hero-copy>.nv-stack{margin-block-start:20px}
+  .nv-home-player{margin-block-start:28px}
+}
+
+@media(max-width:600px){
+  .nv-home .nv-hero{padding-block:38px 42px}
+  .nv-home .nv-hero-copy>h1{font-size:clamp(44px,13vw,53px)}
+  .nv-home-player{margin-block-start:24px}
+}
