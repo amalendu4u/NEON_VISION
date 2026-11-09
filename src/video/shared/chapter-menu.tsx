@@ -21,7 +21,7 @@ function formatTimestamp(seconds: number) {
     : `${minutes}:${String(remainder).padStart(2, '0')}`;
 }
 
-export function ChapterMenu({ available }: { available: boolean }) {
+export function ChapterMenu({ available, showUnavailable = false }: { available: boolean; showUnavailable?: boolean }) {
   const media = useMedia();
   const container = useContainer();
   const [chapters, setChapters] = useState<ChapterEntry[]>([]);
@@ -89,7 +89,7 @@ export function ChapterMenu({ available }: { available: boolean }) {
     };
   }, [available, container, media]);
 
-  if (!available || chapters.length === 0) return null;
+  if (!available && !showUnavailable) return null;
   const activeIndex = chapters.findIndex((chapter) => currentTime >= chapter.startTime && currentTime < chapter.endTime);
 
   return (
@@ -107,7 +107,7 @@ export function ChapterMenu({ available }: { available: boolean }) {
           <div className="media-settings-heading"><span>CHAPTERS</span></div>
           <Menu.Separator className="media-menu-separator" />
           <div className="neon-chapter-items" role="group" aria-label="Chapter list">
-            {chapters.map((chapter, index) => (
+            {chapters.length === 0 ? <p className="neon-chapters-empty" role="status">{available ? 'Chapter cues are not currently exposed by this source.' : 'No chapters are available for this video.'}</p> : chapters.map((chapter, index) => (
               <Menu.Item
                 className="media-menu-item neon-chapter-item"
                 key={`${chapter.startTime}:${chapter.title}`}

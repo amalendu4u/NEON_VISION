@@ -38,12 +38,14 @@ export const PRODUCT_PLAYLIST: readonly PlaylistItem[] = [
     id: 'elephants-dream', title: 'Elephants Dream', description: 'A surreal journey through a machine world.',
     src: 'https://stream.mux.com/aFqzRzKGE4uErMnT7Od8TeNwZ6ICIlvOL5qM01b1CHnE.m3u8',
     type: 'application/x-mpegURL', adapter: 'mux', aspectRatio: '16:9', duration: '10:53',
+    hasChapters: true,
     poster: 'https://image.mux.com/aFqzRzKGE4uErMnT7Od8TeNwZ6ICIlvOL5qM01b1CHnE/thumbnail.webp?time=30',
   },
   {
     id: 'tears-of-steel', title: 'Tears of Steel', description: 'A live-action and animated sci-fi short.',
     src: 'https://stream.mux.com/hWAqpFA2BFD0021okL3cJPPkUk5JtJfh3mb01elQchCAE.m3u8',
     type: 'application/x-mpegURL', adapter: 'mux', aspectRatio: '431:180', duration: '12:14',
+    hasChapters: true,
     poster: 'https://image.mux.com/hWAqpFA2BFD0021okL3cJPPkUk5JtJfh3mb01elQchCAE/thumbnail.webp?time=30',
   },
   {

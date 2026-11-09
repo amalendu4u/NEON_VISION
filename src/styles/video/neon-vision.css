@@ -218,6 +218,14 @@
     white-space: nowrap;
   }
 
+  .media-skin[data-theme="scaffold"][data-preset="video"] .neon-chapters-empty {
+    margin: 0;
+    padding: 12px 10px;
+    color: var(--neon-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
   .media-skin[data-theme="scaffold"][data-preset="video"] .media-sleep-timer h3 {
     margin: 0 8px 6px;
     color: var(--neon-secondary);

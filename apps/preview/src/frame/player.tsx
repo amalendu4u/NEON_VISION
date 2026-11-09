@@ -22,6 +22,8 @@ export interface PlayerProps {
   playlist?: readonly PlaylistItem[];
   /** Whether the preview has room for a separate desktop playlist column. */
   sidePlaylistAvailable?: boolean;
+  /** Keep the chapter entry point visible for product playlists with mixed chapter availability. */
+  showUnavailableChapters?: boolean;
   config?: NeonVisionConfigInput;
 }
 
@@ -142,7 +144,7 @@ function readViewportSize() {
 }
 
 /** `media` carries the workbench's playback options: autoplay, muted, loop, and preload. */
-export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailable = false, config: configInput }: PlayerProps) {
+export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailable = false, showUnavailableChapters = false, config: configInput }: PlayerProps) {
   const config = resolveNeonVisionConfig(configInput);
   const { features } = config;
   const items = playlist.length ? playlist : DEFAULT_PLAYLIST;
@@ -271,9 +273,10 @@ export function Player({ media, playlist = DEFAULT_PLAYLIST, sidePlaylistAvailab
                     </svg>
                   </button>
                 </ButtonTooltip>}
-                {features.chapters && <ChapterMenu
+                {features.chapters && (showUnavailableChapters || selectedItem.hasChapters || selectedItem.tracks?.some((track) => track.kind === 'chapters')) && <ChapterMenu
                   key={selectedItem.id}
                   available={Boolean(selectedItem.hasChapters || selectedItem.tracks?.some((track) => track.kind === 'chapters'))}
+                  showUnavailable={showUnavailableChapters}
                 />}
               </>
             }
