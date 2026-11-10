@@ -92,11 +92,17 @@ body:has(.media-skin[data-neon-theme="gold"]) {
 .neon-stream-layout:has(.media-skin[data-neon-theme="blue"]) {
   --neon-cyan: #38bdf8;
   --neon-purple: #5575ff;
+  --neon-surface-a: #38bdf8;
+  --neon-surface-b: #00f5d4;
+  --neon-surface-c: #5575ff;
 }
 
 .neon-stream-layout:has(.media-skin[data-neon-theme="lime"]) {
   --neon-cyan: #b8ff3b;
   --neon-purple: #38bdf8;
+  --neon-surface-a: #b8ff3b;
+  --neon-surface-b: color-mix(in srgb, #b8ff3b 42%, #00865a);
+  --neon-surface-c: #00f5d4;
 }
 
 .neon-stream-layout:has(.media-skin[data-neon-theme="gold"]) {
@@ -104,6 +110,9 @@ body:has(.media-skin[data-neon-theme="gold"]) {
   --neon-purple: #f5d98e;
   --neon-pink: #8f6b1f;
   --neon-green: #d4af37;
+  --neon-surface-a: #f5d98e;
+  --neon-surface-b: #d4af37;
+  --neon-surface-c: #f59e0b;
   --neon-player-text: #f7f1e3;
   --neon-player-secondary: #b8ad98;
 }
@@ -116,6 +125,9 @@ body:has(.media-skin[data-neon-theme="gold"]) {
   position: relative;
   display: block;
   width: 100%;
+  --neon-surface-a: #00f5d4;
+  --neon-surface-b: #8b5cf6;
+  --neon-surface-c: #ff3cac;
   container: preview-frame / inline-size;
 }
 
@@ -803,4 +815,107 @@ live-video-player,
 audio-player,
 live-audio-player {
   display: contents;
+}
+
+/* Theme-driven surface colour for the preview playlist and its actions. */
+.neon-stream-layout .neon-playlist {
+  background-image:
+    radial-gradient(ellipse at 10% 0%, color-mix(in srgb, var(--neon-surface-a) 12%, transparent), transparent 62%),
+    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--neon-surface-c) 10%, transparent), transparent 66%),
+    linear-gradient(120deg, color-mix(in srgb, var(--neon-surface-b) 7%, transparent), transparent 55%);
+  background-size: 180% 190%, 180% 190%, 220% 100%;
+  background-position: 0% 100%, 100% 0%, 0% 50%;
+}
+
+.neon-stream-layout .neon-playlist[data-open="true"] {
+  animation: neon-vision-surface-flow 11s ease-in-out infinite alternate;
+}
+
+.neon-stream-layout .neon-playlist-item {
+  background-image:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--neon-surface-a) 14%, transparent), transparent 70%),
+    linear-gradient(120deg, color-mix(in srgb, var(--neon-surface-b) 9%, transparent), transparent 48%, color-mix(in srgb, var(--neon-surface-c) 9%, transparent));
+  background-size: 180% 180%, 220% 100%;
+  background-position: 0% 100%, 0% 50%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%), 0 3px 9px rgb(0 0 0 / 16%);
+  transition: transform 180ms cubic-bezier(.2,.75,.25,1), filter 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.neon-stream-layout .neon-playlist-item[aria-pressed="true"] {
+  background-image:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--neon-surface-a) 20%, transparent), transparent 70%),
+    linear-gradient(120deg, color-mix(in srgb, var(--neon-surface-b) 14%, transparent), transparent 48%, color-mix(in srgb, var(--neon-surface-c) 12%, transparent));
+  animation: neon-vision-surface-flow 10s ease-in-out infinite alternate;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--neon-surface-a) 14%, transparent), 0 0 16px color-mix(in srgb, var(--neon-surface-a) 12%, transparent);
+}
+
+@media (hover: hover) {
+  .neon-stream-layout .neon-playlist-item:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1) saturate(1.12);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 9px 20px rgb(0 0 0 / 30%), 0 0 18px color-mix(in srgb, var(--neon-surface-a) 16%, transparent);
+  }
+}
+
+.neon-stream-layout .neon-playlist-item:active {
+  transform: translateY(1px) scale(.99);
+  filter: brightness(.98);
+}
+
+.neon-stream-layout .neon-playlist-item:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--neon-surface-a) 22%, transparent), inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.neon-stream-layout .neon-playlist-complete-actions button {
+  background-image: linear-gradient(120deg, color-mix(in srgb, var(--neon-surface-a) 18%, transparent), transparent 48%, color-mix(in srgb, var(--neon-surface-c) 16%, transparent));
+  background-size: 220% 100%;
+  animation: neon-vision-surface-flow 10s ease-in-out infinite alternate;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 4px 12px rgb(0 0 0 / 22%);
+  transition: transform 180ms cubic-bezier(.2,.75,.25,1), filter 180ms ease, box-shadow 180ms ease;
+}
+
+@media (hover: hover) {
+  .neon-stream-layout .neon-playlist-complete-actions button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1) saturate(1.12);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), 0 9px 18px rgb(0 0 0 / 30%), 0 0 16px color-mix(in srgb, var(--neon-surface-a) 18%, transparent);
+  }
+}
+
+.neon-stream-layout .neon-playlist-complete-actions button:active {
+  transform: translateY(1px) scale(.985);
+  filter: brightness(.98);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-stream-layout .neon-playlist[data-open="true"],
+  .neon-stream-layout .neon-playlist-item[aria-pressed="true"],
+  .neon-stream-layout .neon-playlist-complete-actions button {
+    animation: none !important;
+  }
+
+  .neon-stream-layout .neon-playlist-item,
+  .neon-stream-layout .neon-playlist-complete-actions button {
+    transition: none !important;
+  }
+
+  .neon-stream-layout .neon-playlist-item:hover,
+  .neon-stream-layout .neon-playlist-item:focus-visible,
+  .neon-stream-layout .neon-playlist-item:active,
+  .neon-stream-layout .neon-playlist-complete-actions button:hover,
+  .neon-stream-layout .neon-playlist-complete-actions button:active {
+    transform: none;
+    filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .neon-stream-layout .neon-playlist,
+  .neon-stream-layout .neon-playlist-item,
+  .neon-stream-layout .neon-playlist-complete-actions button {
+    background-image: none;
+    animation: none;
+  }
 }
